@@ -48,7 +48,7 @@ module.exports = function (fileData){
       this.setUnit(this.data, newData);
     }
     sortKeys(newData){
-      let currentObject;
+      let currentOldObject, currentNewObject, didStart=false;
     }
     static new(path="", isMustData){
       if(existsSync(path)){
