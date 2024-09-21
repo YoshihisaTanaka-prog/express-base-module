@@ -6,7 +6,9 @@ const loadSetting = require("./load-setting");
   ・前準備
     ・アプリごとにこのファイルを設定する。
     ・.gitignoreにこのファイルと.gitignoreを追加する。
+*/
 
+/*
 const settingFileInfo = [
   {
     "key": "app",
