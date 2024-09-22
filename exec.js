@@ -4,21 +4,27 @@ const { spawn, execSync } = require('child_process');
 const { writeFileSync } = require('fs');
 
 const runningSpawnObject = {
-  resultData: {status: 0, resultLine: [], resultText: ""},
+  resultData: {success: {resultLine: [], resultText: ""}, error: {resultLine: [], resultText: ""}},
   mainFunction: function(command){
-    writeFileSync("spawn.cmd", "@echo off\n\n" + command);
+    writeFileSync("nwaps.cmd", command);
     const self = this;
     return new Promise((resolve, reject) => {
-      let proc = spawn('spawn.cmd');
+      let proc = spawn('nwaps.cmd');
       proc.stdout.on('data', (data) => {
         console.log(data.toString());
-        self.resultData.resultText += data.toString().replaceAll("\r", "").replaceAll("\t", "    ");
+        self.resultData.success.resultText += data.toString().replaceAll("\r", "").replaceAll("\t", "    ");
         for(const line of data.toString().split("\n")){
-          self.resultData.resultLine.push(line.replaceAll("\r", "").replaceAll("\t", "    "));
+          self.resultData.success.resultLine.push(line.replaceAll("\r", "").replaceAll("\t", "    "));
         }
       });
-      proc.stdout.on("close", (code) => {
-        self.resultData.status = code;
+      proc.stderr.on('data', (err) => {
+        console.log(err.toString());
+        self.resultData.error.resultText += err.toString().replaceAll("\r", "").replaceAll("\t", "    ");
+        for(const line of err.toString().split("\n")){
+          self.resultData.error.resultLine.push(line.replaceAll("\r", "").replaceAll("\t", "    "));
+        }
+      })
+      proc.stdout.on("close", (code) =>{
         resolve(self.resultData);
       })
     })
