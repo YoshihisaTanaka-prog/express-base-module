@@ -37,7 +37,7 @@ const obj = {
               unit.params.push(cachedParam);
               cachedParam = "";
             }
-          } else if(char == "&"){
+          } else if("&|".includes(char)){
             this.formattedCommands.push({command: Object.freeze(unit.command), params: Object.freeze(unit.params)});
             status = 0;
             unit.command = "";
