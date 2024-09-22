@@ -117,4 +117,20 @@ const isSameObject = function(object1, object2, ignoreArrayOrder=false){
   return false;
 }
 
-module.exports = { getType, isSameObject };
+const getUid = function(usedUidList=[], length=10){
+  function sub(){
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz123456789";
+    let uid = letters[Math.floor(Math.random() * 52)];
+    for(let i=1; i<length; i++){
+      uid += letters[Math.floor(Math.random() * 62)];
+    }
+    return uid;
+  }
+  let uid = sub();
+  while(usedUidList.includes(uid)){
+    uid = sub();
+  }
+  return uid;
+}
+
+module.exports = { getType, isSameObject, getUid };
