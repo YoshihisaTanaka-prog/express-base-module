@@ -1,7 +1,6 @@
 "use strict";
 
 const { readFileSync, existsSync, writeFile, lstatSync } = require("fs");
-const { isSameObject } = require("./basic.js");
 
 module.exports = function (fileData){
   class Setting {
