@@ -3,13 +3,14 @@
 const { spawn, execSync } = require('child_process');
 const { writeFileSync } = require('fs');
 
-const runningSpawnObject = {
-  resultData: {success: {resultLine: [], resultText: ""}, error: {resultLine: [], resultText: ""}},
-  mainFunction: function(command){
-    writeFileSync("nwaps.cmd", "@echo off\n\nchcp 65001 & " + command);
-    const self = this;
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
+module.exports = function(characterEncodingIdentifier=65001){
+
+  const runningSpawnObject = {
+    resultData: {success: {resultLine: [], resultText: ""}, error: {resultLine: [], resultText: ""}},
+    mainFunction: function(command){
+      writeFileSync("nwaps.cmd", "@echo off\n\nchcp " + characterEncodingIdentifier + " & " + command);
+      const self = this;
+      return new Promise((resolve, reject) => {
         const proc = spawn('nwaps.cmd', []);
         proc.stdout.on('data', (data) => {
           console.log(data.toString());
@@ -28,44 +29,42 @@ const runningSpawnObject = {
         proc.stdout.on("close", (code) =>{
           resolve(self.resultData);
         })
-      }, 100);
-    })
-  }
-};
+      })
+    }
+  };
 
-const runSpawn = function(command={}){
-  return runningSpawnObject.mainFunction(command[process.platform]);
-};
+  const runSpawn = function(command={}){
+    return runningSpawnObject.mainFunction(command[process.platform]);
+  };
 
-const runExec = function(command={}, isArrayType=true){
-  const resultText = execSync(command[process.platform]).toString();
-  if(isArrayType){
-    return resultText.split("\n").map( (line) => line.replaceAll("\r", "") );
-  } else {
-    return resultText;
+  const runExec = function(command={}, isArrayType=true){
+    const resultText = execSync(command[process.platform]).toString();
+    if(isArrayType){
+      return resultText.split("\n").map( (line) => line.replaceAll("\r", "") );
+    } else {
+      return resultText;
+    }
   }
+
+  class Command {
+    constructor(windows="", mac="", linux=""){
+      this.win32 = windows;
+      this.darwin = mac;
+      this.linux = linux;
+    }
+    runS(){
+      return runSpawn(this);
+    }
+    runE(isArrayType=true){
+      return runExec(this, isArrayType);
+    }
+    static set(windows="", mac="", linux=""){
+      return new Command(windows, mac, linux);
+    }
+    static setAll(command=""){
+      return new Command(command, command, command);
+    }
+  }
+
+  return Command;
 }
-
-class Command {
-  constructor(windows="", mac="", linux=""){
-    this.win32 = windows;
-    this.darwin = mac;
-    this.linux = linux;
-  }
-  runS(){
-    return runSpawn(this);
-  }
-  runE(isArrayType=true){
-    return runExec(this, isArrayType);
-  }
-  static set(windows="", mac="", linux=""){
-    return new Command(windows, mac, linux);
-  }
-  static setAll(command=""){
-    return new Command(command, command, command);
-  }
-}
-
-
-
-module.exports = Command;
