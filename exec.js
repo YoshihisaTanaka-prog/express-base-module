@@ -1,7 +1,5 @@
 "use strict";
 
-// test for checking running child process.
-
 const { spawn, execSync } = require('child_process');
 
 const obj = {
