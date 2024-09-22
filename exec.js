@@ -1,7 +1,6 @@
 "use strict";
 
 const { spawn, execSync } = require('child_process');
-const { isatty } = require('tty');
 
 const obj = {
   outputData: [],
