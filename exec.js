@@ -1,103 +1,32 @@
 "use strict";
 
 const { spawn, execSync } = require('child_process');
+const { writeFileSync } = require('fs');
 
-const obj = {
-  outputData: [],
-  outputUnit: {command: "", results: []},
-  formattedCommands: [],
-  formatCommand: function(command){
-    let status = 0;
-    let cachedParam = "";
-    const unit = {command: "", params: []};
-    for(const char of command){
-      switch (status) {
-        case 0:
-          if("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_".includes(char)){
-            unit.command += char;
-            status = 1;
-          }
-          break;
-        case 1:
-          if(char == " "){
-            status = 2;
-          } else if(char == "&"){
-            this.formattedCommands.push({command: Object.freeze(unit.command), params: Object.freeze(unit.params)});
-            status = 0;
-            unit.command = "";
-            unit.params = [];
-          } else{
-            unit.command += char;
-          }
-          break;
-        case 2:
-          if(char == " "){
-            if(cachedParam != ""){
-              unit.params.push(cachedParam);
-              cachedParam = "";
-            }
-          } else if("&|".includes(char)){
-            this.formattedCommands.push({command: Object.freeze(unit.command), params: Object.freeze(unit.params)});
-            status = 0;
-            unit.command = "";
-            unit.params = [];
-          } else if(char == '"'){
-            status = 3;
-            if(unit.command == "echo"){
-              cachedParam += '"';
-            }
-          } else{
-            cachedParam += char;
-          }
-          break;
-        case 3:
-          if(char == '"'){
-            status = 2;
-            if(unit.command == "echo"){
-              cachedParam += '"';
-            }
-          } else {
-            cachedParam += char
-          }
-          break;
-        default:
-          break;
-      }
-    }
-    unit.params.push(cachedParam);
-    this.formattedCommands.push({command: Object.freeze(unit.command), params: Object.freeze(unit.params)});
-  },
-  funcUnit: function(command, params){
+const runningSpawnObject = {
+  resultData: {status: 0, resultLine: [], resultText: ""},
+  mainFunction: function(command){
+    writeFileSync("spawn.cmd", "@echo off\n\n" + command);
     const self = this;
-    self.outputUnit = {command: command + " " + params.map( (p) => p.includes(" ") ? '"' + p + '"' : p ).join(" "), results: []};
-    return new Promise((resolve, reject) =>{
-      const childProcess = spawn(command, params);
-      childProcess.stdout.on('data', function(chunk){
-        console.log(chunk.toString());
-        for(const line of chunk.toString().split("\n").map( (l) => l.replaceAll("\r", "").replaceAll("\t", "    ") )){
-          self.outputUnit.results.push(line);
+    return new Promise((resolve, reject) => {
+      let proc = spawn('spawn.cmd');
+      proc.stdout.on('data', (data) => {
+        console.log(data.toString());
+        self.resultData.resultText += data.toString().replaceAll("\r", "").replaceAll("\t", "    ");
+        for(const line of data.toString().split("\n")){
+          self.resultData.resultLine.push(line.replaceAll("\r", "").replaceAll("\t", "    "));
         }
       });
-      childProcess.stdout.on("close", function(){
-        self.outputData.push(self.outputUnit);
-        if(self.formattedCommands.length == 0){
-          resolve(self.outputData);
-        } else{
-          const unit = self.formattedCommands.shift();
-          resolve(self.funcUnit(unit.command, unit.params));
-        }
-      });
+      proc.stdout.on("close", (code) => {
+        self.resultData.status = code;
+        resolve(self.resultData);
+      })
     })
-  },
-  mainFunc: function(command=""){
-    this.formatCommand(command);
-    const unit = this.formattedCommands.shift();
-    return this.funcUnit(unit.command, unit.params);
   }
-}
+};
 
 const runSpawn = function(command={}){
-  return obj.mainFunc(command[process.platform]);
+  return runningSpawnObject.mainFunction(command[process.platform]);
 };
 
 const runExec = function(command={}, isArrayType=true){
