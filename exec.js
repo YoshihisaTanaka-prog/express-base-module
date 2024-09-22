@@ -3,7 +3,6 @@
 const { spawn, execSync } = require('child_process');
 
 const obj = {
-  onClose: ()=>{},
   outputData: [],
   outputUnit: {command: "", results: []},
   formattedCommands: [],
@@ -71,33 +70,34 @@ const obj = {
   funcUnit: function(command, params){
     const self = this;
     self.outputUnit = {command: command + " " + params.map( (p) => p.includes(" ") ? '"' + p + '"' : p ).join(" "), results: []};
-    const childProcess = spawn(command, params);
-    childProcess.stdout.on('data', function(chunk){
-      console.log(chunk.toString());
-      for(const line of chunk.toString().split("\n").map( (l) => l.replaceAll("\r", "").replaceAll("\t", "    ") )){
-        self.outputUnit.results.push(line);
-      }
-    });
-    childProcess.stdout.on("close", function(){
-      self.outputData.push(self.outputUnit);
-      if(self.formattedCommands.length == 0){
-        self.onClose(self.outputData);
-      } else{
-        const unit = self.formattedCommands.shift();
-        self.funcUnit(unit.command, unit.params);
-      }
-    });
+    return new Promise((resolve, reject) =>{
+      const childProcess = spawn(command, params);
+      childProcess.stdout.on('data', function(chunk){
+        console.log(chunk.toString());
+        for(const line of chunk.toString().split("\n").map( (l) => l.replaceAll("\r", "").replaceAll("\t", "    ") )){
+          self.outputUnit.results.push(line);
+        }
+      });
+      childProcess.stdout.on("close", function(){
+        self.outputData.push(self.outputUnit);
+        if(self.formattedCommands.length == 0){
+          resolve(self.outputData);
+        } else{
+          const unit = self.formattedCommands.shift();
+          resolve(self.funcUnit(unit.command, unit.params));
+        }
+      });
+    })
   },
-  mainFunc: function(command="", onClose){
-    this.onClose = onClose;
+  mainFunc: function(command=""){
     this.formatCommand(command);
     const unit = this.formattedCommands.shift();
-    this.funcUnit(unit.command, unit.params);
+    return this.funcUnit(unit.command, unit.params);
   }
 }
 
-const runSpawn = function(command={}, onClose=()=>{}){
-  obj.mainFunc(command[process.platform], onClose);
+const runSpawn = function(command={}){
+  return obj.mainFunc(command[process.platform]);
 };
 
 const runExec = function(command={}, isArrayType=true){
@@ -109,20 +109,26 @@ const runExec = function(command={}, isArrayType=true){
   }
 }
 
-class SeparateCommand {
+class Command {
   constructor(windows="", mac="", linux=""){
     this.win32 = windows;
     this.darwin = mac;
     this.linux = linux;
   }
-  runS(onClose=()=>{}){
-    runSpawn(this, onClose);
+  runS(){
+    return runSpawn(this);
   }
   runE(isArrayType=true){
-    runExec(this, isArrayType);
+    return runExec(this, isArrayType);
+  }
+  static set(windows="", mac="", linux=""){
+    return new Command(windows, mac, linux);
+  }
+  static setAll(command=""){
+    return new Command(command, command, command);
   }
 }
 
 
 
-module.exports = { SeparateCommand };
+module.exports = Command;
