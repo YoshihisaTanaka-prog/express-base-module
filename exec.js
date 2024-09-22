@@ -3,30 +3,10 @@
 const { spawn, execSync } = require('child_process');
 
 const obj = {
+  onClose: ()=>{},
   outputData: [],
   outputUnit: {command: "", results: []},
-  funcUnit: function(command, params){
-    const self = this;
-    const childProcess = spawn(command, params);
-    self.outputUnit = {command: command + " " + params.map( (p) => p.includes(" ") ? '"' + p + '"' : p ).join(" "), results: []};
-    childProcess.stdout.on('data', function(chunk){
-      console.log(chunk.toString());
-      for(const line of chunk.toString().split("\n").map( (l) => l.replaceAll("\r", "").replaceAll("\t", "    ") )){
-        self.outputUnit.results.push(line);
-      }
-    });
-    childProcess.stdout.on("close", function(){
-      self.outputData.push(self.outputUnit);
-      if(self.formattedCommands.length == 0){
-        if(self.onClose){
-          self.onClose(self.outputData);
-        }
-      } else{
-        const unit = self.formattedCommands.shift();
-        self.funcUnit(unit.command, unit.params);
-      }
-    });
-  },
+  formattedCommands: [],
   formatCommand: function(command){
     let status = 0;
     let cachedParam = "";
@@ -88,7 +68,26 @@ const obj = {
     unit.params.push(cachedParam);
     this.formattedCommands.push({command: Object.freeze(unit.command), params: Object.freeze(unit.params)});
   },
-  formattedCommands: [],
+  funcUnit: function(command, params){
+    const self = this;
+    self.outputUnit = {command: command + " " + params.map( (p) => p.includes(" ") ? '"' + p + '"' : p ).join(" "), results: []};
+    const childProcess = spawn(command, params);
+    childProcess.stdout.on('data', function(chunk){
+      console.log(chunk.toString());
+      for(const line of chunk.toString().split("\n").map( (l) => l.replaceAll("\r", "").replaceAll("\t", "    ") )){
+        self.outputUnit.results.push(line);
+      }
+    });
+    childProcess.stdout.on("close", function(){
+      self.outputData.push(self.outputUnit);
+      if(self.formattedCommands.length == 0){
+        self.onClose(self.outputData);
+      } else{
+        const unit = self.formattedCommands.shift();
+        self.funcUnit(unit.command, unit.params);
+      }
+    });
+  },
   mainFunc: function(command="", onClose){
     this.onClose = onClose;
     this.formatCommand(command);
