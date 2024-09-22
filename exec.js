@@ -3,15 +3,17 @@
 const { spawn, execSync } = require('child_process');
 const { writeFileSync } = require('fs');
 
+console.log(__dirname);
+
 module.exports = function(characterEncodingIdentifier=65001){
 
   const runningSpawnObject = {
     resultData: {success: {resultLine: [], resultText: ""}, error: {resultLine: [], resultText: ""}},
     mainFunction: function(command){
-      writeFileSync("nwaps.cmd", "@echo off\n\nchcp " + characterEncodingIdentifier + " & " + command);
+      writeFileSync(__dirname + "\\nwaps.cmd", "@echo off\n\nchcp " + characterEncodingIdentifier + " > nul & " + command);
       const self = this;
       return new Promise((resolve, reject) => {
-        const proc = spawn('nwaps.cmd', []);
+        const proc = spawn(__dirname + '\\nwaps.cmd', []);
         proc.stdout.on('data', (data) => {
           console.log(data.toString());
           self.resultData.success.resultText += data.toString().replaceAll("\r", "").replaceAll("\t", "    ");
