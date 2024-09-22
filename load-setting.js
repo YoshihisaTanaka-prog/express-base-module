@@ -1,17 +1,11 @@
 "use strict";
 
 const { readFileSync, existsSync, writeFile, lstatSync } = require("fs");
+const { isSameObject } = require("./basic.js");
 
 module.exports = function (fileData){
   class Setting {
     constructor(path="", data){
-      this.path = Object.freeze(path);
-      if(data){
-        this.data = data;
-      } else {
-        this.data = {};
-        this.set({});
-      }
       const getType = function (object) {
         return Object.prototype.toString.call(object).split(" ")[1].slice(0, -1).toLowerCase();
       }
@@ -40,12 +34,68 @@ module.exports = function (fileData){
           }
           console.error("type error while updating to\n" + JSON.stringify(newObject, null, 2));
         }),
-        writable: false,
         enumerable: false
       });
+      Object.defineProperty(this, 'write', {
+        value: Object.freeze(function(){
+          return new Promise((resolve, reject) =>{
+            writeFile(this.path, JSON.stringify(this.data, null, 2), (e)=>{
+              if(e){
+                resolve(e.message);
+              } else {
+                resolve("successed")
+              }
+            });
+          })
+        }),
+        enumerable: false
+      });
+      this.path = Object.freeze(path);
+      if(data){
+        this.data = data;
+      } else {
+        this.data = {};
+        this.write();
+      }
     }
-    set(newData){
+    async set(newData){
       this.setUnit(this.data, newData);
+      return await this.write();
+    }
+    async sortKey(path="", orderdKeys=[], defaultValue){
+      const cachedObjects = [this.data];
+      let cachedObject = this.data;
+      const sortedObject = {};
+      const pathArray = path.split(".");
+      let cachedPath = "";
+      for(let i=0; i<pathArray.length; i++) {
+        const key = pathArray[i];
+        cachedPath += `.${key}`;
+        if(cachedObject[key]){
+          cachedObjects.push(cachedObject[key]);
+          cachedObject = cachedObject[key];
+        } else {
+          return"cannot access to this.data" + cachedPath;
+        }
+      }
+      for(const key of orderdKeys){
+        if(cachedObject[key]){
+          sortedObject[key] = cachedObject[key];
+        } else {
+          console.log(key, "does not exist.");
+          sortedObject[key] = defaultValue;
+        }
+      }
+      for(const key of Object.keys(cachedObject)){
+        if(!orderdKeys.includes(key)){
+          sortedObject[key] = cachedObject[key];
+        }
+      }
+      cachedObjects[pathArray.length] = sortedObject;
+      for(let i=cachedObjects.length-1; i>0; i--){
+        cachedObjects[i-1][pathArray[i-1]] = cachedObjects[i];
+      }
+      return await this.write();
     }
     static new(path="", isMustData){
       if(existsSync(path)){
@@ -56,10 +106,10 @@ module.exports = function (fileData){
         }
       }
       if(isMustData){
-        console.error("stop this process because essential json file does not exist.");
+        console.error("Stoped this process because essential json file does not exist " + path + " is folder.\nPlease check your setting file.");
         process.exit(1);
       }
-      return Object.freeze(new Setting(path, {}));
+      return Object.freeze(new Setting(path, null));
     }
   }
   
