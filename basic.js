@@ -172,8 +172,9 @@ const getMyOptions = function(){
         break;
     }
   }
-  console.log(returnObject);
   return returnObject;
 }
 
-module.exports = { getType, isSameObject, getUid, getMyOptions };
+const myOptions = getMyOptions();
+
+module.exports = { getType, isSameObject, getUid, myOptions };
