@@ -133,4 +133,47 @@ const getUid = function(usedUidList=[], length=10){
   return uid;
 }
 
-module.exports = { getType, isSameObject, getUid };
+const getMyOptions = function(){
+  function countInitialHyphens(text) {
+    let returnValue = 0;
+    for(const c of text){
+      if(c == "-"){
+        returnValue += 1;
+      } else {
+        return returnValue;
+      }
+    }
+    return returnValue;
+  }
+  let currentKey = "";
+  const returnObject = {params: [], options: {}};
+  for(const arg of process.argv.slice(2)){
+    switch (countInitialHyphens(arg)){
+      case 0:
+        if(currentKey == ""){
+          returnObject.params.push(arg);
+        } else{
+          returnObject.options[currentKey].push(arg);
+        }
+        break;
+      case 1:
+        currentKey = arg;
+        if(returnObject.options[currentKey] == null){
+          returnObject.options[currentKey] = []
+        }
+        break;
+      case 2:
+        currentKey = arg;
+        if(returnObject.options[currentKey] == null){
+          returnObject.options[currentKey] = []
+        }
+        break;
+      default:
+        break;
+    }
+  }
+  console.log(returnObject);
+  return returnObject;
+}
+
+module.exports = { getType, isSameObject, getUid, getMyOptions };
